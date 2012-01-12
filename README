@@ -1,0 +1,62 @@
+SNORTBAN
+
+Parses the snort alert log and creates one line logs suitable for fail2ban.
+
+REQUIRES
+
+    - Perl
+    - One Perl module: Proc::PID::File.
+      On Debian, Ubuntu and derivates install it issuing:
+        # apt-get install libproc-pid-file-perl
+    - fail2ban
+    - snort
+
+HOW TO INSTALL
+
+    - Copy the snortban file to a place suitable, run it from /etc/rc.loca
+      or create a service file.  It must be called with an '&' so it goes to background.
+
+    - Add an entry in your logrotate.d/snort file to rotate your alert.ban file.
+      
+
+USAGE
+
+    snortban [--debug] [--logfile=/var/log/snort/alert] [--banfile=/var/log/snort/alert.ban] &
+
+USING FROM fail2ban
+
+    When running, snortban will log entries to the banfile like this:
+
+    Thu Jan 12 09:56:07 2012 [Priority: 3]  1.2.3.4 -> 5.6.7.8 [**] [122:3:0] (portscan) TCP Portsweep [**]
+
+    Filters must be created in fail2ban to check it. Two examples are in this
+    package: snortp1.conf and snortp2.conf. Those fails should be in 
+    /etc/fail2ban/filter.d/
+    Add this to your jail.conf file so the rules are used:
+
+[snortp1]
+enabled  = true
+port     = 22
+banaction= iptables-allports
+filter   = snort_p1
+maxretry = 1
+logpath  = /var/log/snort/alert.ban
+
+[snortp2]
+enabled  = true
+port     = 22
+banaction= iptables-allports
+filter   = snort_p2
+maxretry = 10
+logpath  = /var/log/snort/alert.ban
+
+
+LICENSE
+
+    GNU GENERAL PUBLIC LICENSE Version 3
+    http://www.gnu.org/licenses/gpl.html
+
+AUTHOR
+
+    Francesc Guasch -  frankie  etsetb upc edu
+

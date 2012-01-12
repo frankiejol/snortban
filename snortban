@@ -1,0 +1,113 @@
+#!/usr/bin/perl -w
+
+#################################################################3
+#
+# snortban
+#
+# Francesc Guasch - frankie etsetb upc edu
+#
+
+use strict;
+use Getopt::Long;
+use Proc::PID::File;
+
+$|=1;
+
+my $DEBUG;
+my $LOGFILE = "/var/log/snort/alert";
+my $BANFILE = "$LOGFILE.ban";
+my $TIMEOUT = 300;
+
+my $VERSION = '0.01';
+
+{
+
+    my $version;
+    my $help;
+    
+    GetOptions ( 
+            debug => \$DEBUG 
+        , logfile => \$LOGFILE 
+        , banfile => \$BANFILE
+        , version => \$version
+        ,    help => \$help
+    );
+    
+    if ($version) {
+            print "$0 v$VERSION\n";
+            exit 0;
+    }
+    
+    if ($help) {
+        print "$0 [--debug] [--help] [--logfile=$LOGFILE]"
+            ." [--banfile=$BANFILE]\n";
+        exit 0;
+
+    }
+
+}
+my $PROC = Proc::PID::File->new();
+
+########################################################################
+
+sub tail {
+        print "Opening $LOGFILE\n"          if $DEBUG;
+        open my $tail ,'-|',"tail -f $LOGFILE"
+            or die "I can't tail -f $LOGFILE$!";
+
+        print "Output to $BANFILE\n"        if $DEBUG;
+        open BAN,'>>', $BANFILE                 or die "$! $BANFILE";
+
+        my $stdout = select(BAN);
+        $|=1;
+        select($stdout);
+
+        my $cnt = 0;
+        my $former;
+        while (my $line = <$tail>) {
+            if  ($line !~ /Priority: \d/) {
+                $former = $line;
+                next;
+            }
+			next if ! $former;
+            chomp $line;
+            my $next=<$tail>;
+            chomp $next;
+            $next =~ s/.*?\.\d+ //;
+            my $info = "".localtime(time)." $line $next $former";
+            print BAN $info;
+            print $info     if $DEBUG;
+        }
+        close $tail;
+        close BAN;
+}
+
+sub start  {
+
+	die "Already running\n" if Proc::PID::File->running();
+
+	print "Starting $0\n";
+
+	for (;;) {
+		my $pid = fork();
+		die "I can't fork" if !defined $pid;
+		if ($pid) {
+			sleep $TIMEOUT;
+			kill 15, $pid;
+			sleep 1;
+			if ( kill 0,$pid ) {
+				sleep(($TIMEOUT / 10) + 2);
+				kill 9, $pid;
+			}
+			print "Waiting for pid $pid\n"	if $DEBUG;
+			my $pid_end = wait;
+			print "Done $pid_end\n"			if $DEBUG;
+		} else {
+			tail();
+		}
+	}
+}
+
+################################################################################
+
+start();
