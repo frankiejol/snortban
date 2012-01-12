@@ -69,7 +69,7 @@ sub tail {
                 $former = $line;
                 next;
             }
-			next if ! $former;
+            next if ! $former;
             chomp $line;
             my $next=<$tail>;
             chomp $next;
