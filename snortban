@@ -56,7 +56,7 @@ sub tail {
             or die "I can't tail -f $LOGFILE$!";
 
         print "Output to $BANFILE\n"        if $DEBUG;
-        open BAN,'>>', $BANFILE                 or die "$! $BANFILE";
+        open my $ban,'>>', $BANFILE                 or die "$! $BANFILE";
 
         my $stdout = select(BAN);
         $|=1;
@@ -79,7 +79,7 @@ sub tail {
             print $info     if $DEBUG;
         }
         close $tail;
-        close BAN;
+        close $ban;
 }
 
 sub start  {
