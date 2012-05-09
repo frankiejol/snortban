@@ -16,7 +16,7 @@ $|=1;
 my $DEBUG;
 my $LOGFILE = "/var/log/snort/alert";
 my $BANFILE = "$LOGFILE.ban";
-my $TIMEOUT = 300;
+my $TIMEOUT = 30;
 
 my $VERSION = '0.01';
 
@@ -54,6 +54,8 @@ my $F_BAN;
 
 sub tail {
         print "Opening $LOGFILE\n"          if $DEBUG;
+		die "Missing $LOGFILE\n"
+			if ! -e $LOGFILE;
         open $F_TAIL ,'-|',"tail -f $LOGFILE"
             or die "I can't tail -f $LOGFILE$!";
 
@@ -73,11 +75,11 @@ sub tail {
             }
             next if ! $former;
             chomp $line;
-            my $next=<$tail>;
+            my $next=<$F_TAIL>;
             chomp $next;
             $next =~ s/.*?\.\d+ //;
             my $info = "".localtime(time)." $line $next $former";
-            print BAN $info;
+            print $F_BAN $info;
             print $info     if $DEBUG;
         }
         close $F_TAIL;
@@ -90,24 +92,13 @@ sub start  {
 
 	print "Starting $0\n";
 
-	for (;;) {
-		my $pid = fork();
-		die "I can't fork" if !defined $pid;
-		if ($pid) {
-			sleep $TIMEOUT;
-			kill 15, $pid;
-			sleep 1;
-			if ( kill 0,$pid ) {
-				sleep(($TIMEOUT / 10) + 2);
-				kill 9, $pid;
-			}
-			print "Waiting for pid $pid\n"	if $DEBUG;
-			my $pid_end = wait;
-			print "Done $pid_end\n"			if $DEBUG;
-		} else {
-			tail();
-		}
-	}
+	local $SIG{ALRM} = sub { 
+						warn "Closing tail"; 
+						close $F_TAIL; close $F_BAN;
+						tail();
+	};
+	alarm($TIMEOUT);
+	tail();
 }
 
 ################################################################################
