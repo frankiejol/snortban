@@ -29,6 +29,7 @@ my $VERSION = '0.01';
             debug => \$DEBUG 
         , logfile => \$LOGFILE 
         , banfile => \$BANFILE
+        , timeout => \$TIMEOUT
         , version => \$version
         ,    help => \$help
     );
@@ -39,7 +40,7 @@ my $VERSION = '0.01';
     }
     
     if ($help) {
-        print "$0 [--debug] [--help] [--logfile=$LOGFILE]"
+        print "$0 [--debug] [--help] [--logfile=$LOGFILE] [--timeout=$TIMEOUT]"
             ." [--banfile=$BANFILE]\n";
         exit 0;
 
