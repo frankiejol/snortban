@@ -47,24 +47,26 @@ my $VERSION = '0.01';
 
 }
 my $PROC = Proc::PID::File->new();
+my $F_TAIL;
+my $F_BAN;
 
 ########################################################################
 
 sub tail {
         print "Opening $LOGFILE\n"          if $DEBUG;
-        open my $tail ,'-|',"tail -f $LOGFILE"
+        open $F_TAIL ,'-|',"tail -f $LOGFILE"
             or die "I can't tail -f $LOGFILE$!";
 
         print "Output to $BANFILE\n"        if $DEBUG;
-        open my $ban,'>>', $BANFILE                 or die "$! $BANFILE";
+        open $F_BAN,'>>', $BANFILE                 or die "$! $BANFILE";
 
-        my $stdout = select(BAN);
+        my $stdout = select($F_BAN);
         $|=1;
         select($stdout);
 
         my $cnt = 0;
         my $former;
-        while (my $line = <$tail>) {
+        while (my $line = <$F_TAIL>) {
             if  ($line !~ /Priority: \d/) {
                 $former = $line;
                 next;
@@ -78,8 +80,8 @@ sub tail {
             print BAN $info;
             print $info     if $DEBUG;
         }
-        close $tail;
-        close $ban;
+        close $F_TAIL;
+        close $F_BAN;
 }
 
 sub start  {
