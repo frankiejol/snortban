@@ -10,6 +10,7 @@
 use strict;
 use Getopt::Long;
 use Proc::PID::File;
+use File::Tail;
 
 $|=1;
 
@@ -48,43 +49,43 @@ my $VERSION = '0.01';
 
 }
 my $PROC = Proc::PID::File->new();
-my $F_TAIL;
-my $F_BAN;
 
 ########################################################################
 
 sub tail {
+		warn "Opening $LOGFILE -> $BANFILE\n";
         print "Opening $LOGFILE\n"          if $DEBUG;
 		die "Missing $LOGFILE\n"
 			if ! -e $LOGFILE;
-        open $F_TAIL ,'-|',"tail -f $LOGFILE"
-            or die "I can't tail -f $LOGFILE$!";
+
+		my $f_tail = File::Tail->new($LOGFILE)
+			or die "$! $LOGFILE";
 
         print "Output to $BANFILE\n"        if $DEBUG;
-        open $F_BAN,'>>', $BANFILE                 or die "$! $BANFILE";
+        open my $f_ban,'>>', $BANFILE                 or die "$! $BANFILE";
 
-        my $stdout = select($F_BAN);
+        my $stdout = select($f_ban);
         $|=1;
         select($stdout);
 
         my $cnt = 0;
         my $former;
-        while (my $line = <$F_TAIL>) {
+        while (my $line = $f_tail->read) {
             if  ($line !~ /Priority: \d/) {
                 $former = $line;
                 next;
             }
             next if ! $former;
             chomp $line;
-            my $next=<$F_TAIL>;
+            my $next=$f_tail->read;
             chomp $next;
             $next =~ s/.*?\.\d+ //;
             my $info = "".localtime(time)." $line $next $former";
-            print $F_BAN $info;
+            print $f_ban $info;
             print $info     if $DEBUG;
         }
-        close $F_TAIL;
-        close $F_BAN;
+        close $f_tail;
+        close $f_ban;
 }
 
 sub start  {
@@ -93,13 +94,9 @@ sub start  {
 
 	print "Starting $0\n";
 
-	local $SIG{ALRM} = sub { 
-						warn "Closing tail"; 
-						close $F_TAIL; close $F_BAN;
-						tail();
-	};
-	alarm($TIMEOUT);
-	tail();
+	for (;;) {
+		tail();
+	}
 }
 
 ################################################################################
