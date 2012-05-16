@@ -17,9 +17,9 @@ $|=1;
 my $DEBUG;
 my $LOGFILE = "/var/log/snort/alert";
 my $BANFILE = "$LOGFILE.ban";
-my $TIMEOUT = 30;
+my $TIMEOUT = 300;
 
-my $VERSION = '0.01';
+my $VERSION = '0.02';
 
 {
 
